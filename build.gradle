@@ -1,0 +1,65 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+
+group = 'lk.inli.rest'
+version = '1.0-SNAPSHOT'
+
+description = ''
+
+def javaVersion = JavaVersion.VERSION_1_8
+sourceCompatibility = javaVersion
+targetCompatibility = javaVersion
+
+repositories {
+     mavenCentral()
+     maven { url "https://repo.spring.io/libs-milestone-local" }
+}
+dependencies {
+    compile(group: 'org.apache.cxf', name: 'cxf-spring-boot-starter-jaxrs', version:'3.3.2') {
+        exclude(module: 'spring-boot-starter-logging')
+    }
+    compile group: 'org.webjars', name: 'swagger-ui', version:'3.20.9'
+    compile group: 'org.apache.cxf', name: 'cxf-rt-rs-service-description-openapi-v3', version:'3.3.2'
+
+//    compile 'org.springframework.boot:spring-boot-starter-actuator:2.1.2.RELEASE'
+    compile 'org.springframework.cloud:spring-cloud-config-dependencies:2.1.0.RELEASE'
+    compile 'org.springframework.cloud:spring-cloud-sleuth-dependencies:2.1.0.RELEASE'
+    compile 'org.springframework.cloud:spring-cloud-starter-zipkin:2.1.0.RELEASE'
+    compile 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client:2.1.0.RELEASE'
+
+//    compile 'org.webjars:swagger-ui:3.20.9'
+    compile 'org.apache.cxf:cxf-rt-rs-service-description-swagger:3.3.2'
+    compile 'org.apache.cxf:cxf-rt-features-metrics:3.3.2'
+
+    testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version:'2.1.6.RELEASE'
+}
+
+//Copy all dependencies to a folder and later add them to the class-path
+task copyDependencies (type: Copy) {
+    def target = "build/libs/dependencies"
+    file(target).mkdirs()
+    from configurations.compile
+    into target
+}
+
+//Create a single Jar with all dependencies
+task packageJar(type: Jar) {
+    dependsOn test
+    dependsOn copyDependencies
+
+    manifest {
+        attributes(
+            'Implementation-Title': 'Greeting Microservice with Spring',
+            'Implementation-Version': version,
+            'Main-Class': 'lk.inli.rest.CXFSpringApplication',
+            "Class-Path": '. dependencies/' + configurations.compile.collect { it.getName() }.join(' dependencies/')
+        )
+    }
+    with jar
+}
+
+test {
+    testLogging {
+        events "started", "passed", "skipped", "failed", "standardOut", "standardError"
+    }
+}
